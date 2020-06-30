@@ -1,1 +1,7 @@
 .DS_Store
+data/kaggle/**/**/*.jpeg
+data/messidor2/**/**/*.png
+data/messidor2/**/**/*.jpg
+Notebooks/.ipynb_checkpoints/*
+data/kaggle/kaggle_processed/*
+lib/__pycache__/*.pyc
