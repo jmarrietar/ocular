@@ -1,7 +1,33 @@
-.DS_Store
+
+# TFRecord files
+data/**/**/**/*.tfrecord
+data/**/**/**/*.txt
+
+# Cache
+../../core/__pycache__/
+Notebooks/.ipynb_checkpoints/*
+
+# Images
 data/kaggle/**/**/*.jpeg
 data/messidor2/**/**/*.png
 data/messidor2/**/**/*.jpg
-Notebooks/.ipynb_checkpoints/*
 data/kaggle/kaggle_processed/*
+
+# Compiled python modules.
+*.pyc
 lib/__pycache__/*.pyc
+core/__pycache__/*.pyc
+utils/__pycache__/*.pyc
+
+# Setuptools distribution folder.
+/dist/
+
+# Build 
+build/
+
+# Python egg metadata, regenerated from source files by setuptools.
+/*.egg-info
+
+.DS_Store
+
+
