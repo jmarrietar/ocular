@@ -1,0 +1,25 @@
+version: 1
+
+formatters:
+  simple:
+    format: "%(name)s.%(funcName)s: %(message)s"
+  extended:
+    format: "%(asctime)s;%(levelname)s;%(name)s.%(funcName)s;%(lineno)s;%(message)s"
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: simple
+
+  file_handler:
+    class: logging.FileHandler
+    level: DEBUG
+    formatter: extended
+    filename: ocular.log
+
+loggers:
+  '':
+     handlers: [console, file_handler]
+     level: DEBUG
+     propagate: False

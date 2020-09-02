@@ -1,7 +1,5 @@
 ########################################################################
 #
-# CODE FROM: https://github.com/mikevoets/jama16-retina-replication 
-#
 # Functions for preprocessing data-set.
 #
 # Implemented in Python 3.5
@@ -18,6 +16,8 @@ from pylab import array, arange, uint8
 
 ########################################################################
 
+def sum():
+    return 2+50
 
 def _increase_contrast(image):
     """
