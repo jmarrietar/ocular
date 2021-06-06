@@ -1,3 +1,6 @@
+# Original Auxiliar Code from https://github.com/mikevoets/jama16-retina-replication
+# https://github.com/mikevoets/jama16-retina-replication/blob/master/lib/preprocess.py
+
 ########################################################################
 #
 # Functions for preprocessing data-set.
