@@ -1,34 +1,66 @@
-from utils.utils import save_checkpoint, accuracy_func
-from utils.data_aug.gaussian_blur import GaussianBlur
-from utils.data_aug.view_generator import (
-    ContrastiveLearningViewGenerator,
-    get_simclr_pipeline_transform,
-)
-from resnet_simclr import ResNetSimCLR
-import torch
-import torch.nn.functional as F
+import argparse
+import logging
 import os
 import time
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import torchvision
+from torch.utils.tensorboard import SummaryWriter
+from torchvision import datasets, transforms
+
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.utils.utils as xu
-import torchvision
-from torchvision import datasets, transforms
-import logging
-from torch.utils.tensorboard import SummaryWriter
+from resnet_simclr import ResNetSimCLR
+from utils.data_aug.gaussian_blur import GaussianBlur
+from utils.data_aug.view_generator import (
+    ContrastiveLearningViewGenerator,
+    get_simclr_pipeline_transform,
+)
+from utils.utils import accuracy_func, save_checkpoint
+
+
+def init_argparse():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--data_dir", metavar="DIR", default="/tmp/cifar", help="path to dataset"
+    )
+    parser.add_argument("--batch-size", default=64, type=int, metavar="N")
+    parser.add_argument("--num_workers", default=2, type=int)
+    parser.add_argument(
+        "--learning-rate", default=0.00001, type=float, help="initial learning rate"
+    )
+    parser.add_argument(
+        "--num_epochs",
+        default=50,
+        type=int,
+        metavar="N",
+        help="number of total epochs to run",
+    )
+    parser.add_argument(
+        "--num_cores",
+        default=8,
+        type=int,
+        metavar="N",
+        help="number of total epochs to run",
+    )
+    parser.add_argument("--log_steps", default=100, type=int, help="Log every n steps")
+    parser.add_argument("--metrics_debug", default=False, type=bool)
+
+    return parser
 
 
 def info_nce_loss(features, device):
 
     labels = torch.cat(
-        [torch.arange(FLAGS["batch_size"]) for i in range(2)], dim=0
+        [torch.arange(FLAGS.batch_size) for i in range(2)], dim=0
     )  # modifique a 2
     labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
 
@@ -67,11 +99,10 @@ def info_nce_loss(features, device):
 print("Hello Jose")
 
 
-SERIAL_EXEC = xmp.MpSerialExecutor()
-
-WRAPPED_MODEL = xmp.MpModelWrapper(ResNetSimCLR(base_model="resnet50"))
-
 UNLABELED = "sample@1000"
+
+SERIAL_EXEC = xmp.MpSerialExecutor()
+WRAPPED_MODEL = xmp.MpModelWrapper(ResNetSimCLR(base_model="resnet50"))
 
 
 def train_resnet():
@@ -100,14 +131,14 @@ def train_resnet():
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=FLAGS["batch_size"],
+        batch_size=FLAGS.batch_size,
         sampler=train_sampler,
-        num_workers=FLAGS["num_workers"],
+        num_workers=FLAGS.num_workers,
         drop_last=True,
     )
 
     # Scale learning rate to num cores
-    learning_rate = FLAGS["learning_rate"] * xm.xrt_world_size()
+    learning_rate = FLAGS.learning_rate * xm.xrt_world_size()
 
     # Get loss function, optimizer, and model
     device = xm.xla_device()
@@ -133,11 +164,11 @@ def train_resnet():
 
             loss.backward()
             xm.optimizer_step(optimizer)
-            tracker.add(FLAGS["batch_size"])
+            tracker.add(FLAGS.batch_size)
 
             top1, top5 = accuracy_func(logits, labels, topk=(1, 5))
 
-            if x % FLAGS["log_steps"] == 0:
+            if x % FLAGS.log_steps == 0:
                 print(
                     "[xla:{}]({}) Loss={:.5f} Rate={:.2f} GlobalRate={:.2f} Time={}".format(
                         xm.get_ordinal(),
@@ -151,17 +182,17 @@ def train_resnet():
                 )
                 print(f"Top1 accuracy: {top1[0]}")
 
-    # Train and eval loops
+    # Train loop
     accuracy = 0.0
     data, pred, target = None, None, None
-    for epoch in range(1, FLAGS["num_epochs"] + 1):
+    for epoch in range(1, FLAGS.num_epochs + 1):
         para_loader = pl.ParallelLoader(train_loader, [device])
         train_loop_fn(para_loader.per_device_loader(device))
         xm.master_print("Finished training epoch {}".format(epoch))
 
         xm.save(model.state_dict(), "net-DR-SimCLR.pt")
 
-        if FLAGS["metrics_debug"]:
+        if FLAGS.metrics_debug:
             xm.master_print(met.metrics_report(), flush=True)
 
     return accuracy, data, pred, target
@@ -175,4 +206,8 @@ def _mp_fn(rank, flags):
     accuracy, data, pred, target = train_resnet()
 
 
-xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS["num_cores"], start_method="fork")
+if __name__ == "__main__":
+    parser = init_argparse()
+    FLAGS = parser.parse_args()
+    print(FLAGS)
+    xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores, start_method="fork")
