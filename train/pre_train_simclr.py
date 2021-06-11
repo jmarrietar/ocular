@@ -216,7 +216,7 @@ def train_resnet():
         train_loop_fn(para_loader.per_device_loader(device))
         xm.master_print("Finished training epoch {}".format(epoch))
 
-        if epoch%2 == 0:
+        if epoch%20 == 0:
             xm.save(model.state_dict(), "models/net-DR-SimCLR-epoch-{}.pt".format(epoch))
 
         if FLAGS.metrics_debug:
