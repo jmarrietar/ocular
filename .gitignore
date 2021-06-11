@@ -8,10 +8,16 @@ data/**/**/**/*.txt
 Notebooks/.ipynb_checkpoints/*
 
 # Images
+data/**/**/*.jpg
+data/**/**/*.jpeg
 data/kaggle/**/**/*.jpeg
 data/messidor2/**/**/*.png
 data/messidor2/**/**/*.jpg
 data/kaggle/kaggle_processed/*
+data/sample@500.zip
+data/sample@1000.zip
+data/sample@2000.zip
+data/sample@3000.zip
 
 # Compiled python modules.
 *.pyc
