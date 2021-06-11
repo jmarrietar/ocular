@@ -19,9 +19,6 @@ from pylab import array, arange, uint8
 
 ########################################################################
 
-def sum():
-    return 2+50
-
 def _increase_contrast(image):
     """
     Helper function for increasing contrast of image.
