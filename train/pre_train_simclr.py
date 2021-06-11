@@ -98,34 +98,31 @@ def info_nce_loss(features, device):
     return logits, labels
 
 
-device = xm.xla_device()
+parser = init_argparse()
+FLAGS = parser.parse_args()
+
 SERIAL_EXEC = xmp.MpSerialExecutor()
 
 model = ResNetSimCLR(base_model="resnet50")
 
 WRAPPED_MODEL = xmp.MpModelWrapper(model)
 
-if args.resume_epochs:
+
+if FLAGS.resume_epochs:
     print("Resuming Training ...")
 
-    model.fc = nn.Sequential(
-        nn.Linear(2048, 512),
-        nn.Linear(512, 1),
-        nn.Sigmoid()
-    ).to(device)
+    state_dict = xser.load("models/net-DR-SimCLR-epoch-{}.pt".format(FLAGS.resume_epochs))
 
-    state_dict = xser.load("models/net-DR-SimCLR-epoch-{}.pt".format(args.resume_epochs))
-
-    for k in list(state_dict.keys()):
-
-    if k.startswith('backbone.'):
-      if k.startswith('backbone') and not k.startswith('backbone.fc'):
-        # remove prefix
-        state_dict[k[len("backbone."):]] = state_dict[k]
-    del state_dict[k]
+    #for k in list(state_dict.keys()):
+    #    if k.startswith('backbone.'):
+    #        if k.startswith('backbone') and not k.startswith('backbone.fc'):
+    #        # remove prefix
+    #            state_dict[k[len("backbone."):]] = state_dict[k]
+    #    del state_dict[k]
 
     log = model.load_state_dict(state_dict, strict=False)
     print(log)
+
 
 def train_resnet():
     torch.manual_seed(1)
@@ -219,7 +216,7 @@ def train_resnet():
         train_loop_fn(para_loader.per_device_loader(device))
         xm.master_print("Finished training epoch {}".format(epoch))
 
-        if epoch%20 == 0:
+        if epoch%2 == 0:
             xm.save(model.state_dict(), "models/net-DR-SimCLR-epoch-{}.pt".format(epoch))
 
         if FLAGS.metrics_debug:
