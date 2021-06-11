@@ -96,10 +96,6 @@ def info_nce_loss(features, device):
     return logits, labels
 
 
-print("Hello Jose")
-
-
-UNLABELED = "sample@1000"
 
 SERIAL_EXEC = xmp.MpSerialExecutor()
 WRAPPED_MODEL = xmp.MpModelWrapper(ResNetSimCLR(base_model="resnet50"))
@@ -111,7 +107,7 @@ def train_resnet():
     def get_dataset():
 
         train_dataset = datasets.ImageFolder(
-            root="{}".format(UNLABELED),
+            root="{}".format(FLAGS.data_dir),
             transform=ContrastiveLearningViewGenerator(
                 get_simclr_pipeline_transform(224), n_views=2
             ),
@@ -190,7 +186,7 @@ def train_resnet():
         train_loop_fn(para_loader.per_device_loader(device))
         xm.master_print("Finished training epoch {}".format(epoch))
 
-        xm.save(model.state_dict(), "net-DR-SimCLR.pt")
+        xm.save(model.state_dict(), "models/net-DR-SimCLR.pt")
 
         if FLAGS.metrics_debug:
             xm.master_print(met.metrics_report(), flush=True)
