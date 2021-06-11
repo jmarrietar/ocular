@@ -23,6 +23,7 @@ from utils.data_aug.view_generator import (
     ContrastiveLearningViewGenerator,
     get_simclr_pipeline_transform,
 )
+import torch_xla.utils.serialization as xser
 from utils.utils import accuracy_func, save_checkpoint
 
 
@@ -53,6 +54,7 @@ def init_argparse():
     )
     parser.add_argument("--log_steps", default=100, type=int, help="Log every n steps")
     parser.add_argument("--metrics_debug", default=False, type=bool)
+    parser.add_argument('--resume-epochs', type=int)
 
     return parser
 
@@ -96,10 +98,34 @@ def info_nce_loss(features, device):
     return logits, labels
 
 
-
+device = xm.xla_device()
 SERIAL_EXEC = xmp.MpSerialExecutor()
-WRAPPED_MODEL = xmp.MpModelWrapper(ResNetSimCLR(base_model="resnet50"))
 
+model = ResNetSimCLR(base_model="resnet50")
+
+WRAPPED_MODEL = xmp.MpModelWrapper(model)
+
+if args.resume_epochs:
+    print("Resuming Training ...")
+
+    model.fc = nn.Sequential(
+        nn.Linear(2048, 512),
+        nn.Linear(512, 1),
+        nn.Sigmoid()
+    ).to(device)
+
+    state_dict = xser.load("models/net-DR-SimCLR-epoch-{}.pt".format(args.resume_epochs))
+
+    for k in list(state_dict.keys()):
+
+    if k.startswith('backbone.'):
+      if k.startswith('backbone') and not k.startswith('backbone.fc'):
+        # remove prefix
+        state_dict[k[len("backbone."):]] = state_dict[k]
+    del state_dict[k]
+
+    log = model.load_state_dict(state_dict, strict=False)
+    print(log)
 
 def train_resnet():
     torch.manual_seed(1)
@@ -181,12 +207,20 @@ def train_resnet():
     # Train loop
     accuracy = 0.0
     data, pred, target = None, None, None
-    for epoch in range(1, FLAGS.num_epochs + 1):
+
+    start_epoch = 0
+    if FLAGS.resume_epochs:
+        start_epoch = FLAGS.resume_epochs
+    
+    end_epoch = FLAGS.num_epochs
+
+    for epoch in range(start_epoch, end_epoch):
         para_loader = pl.ParallelLoader(train_loader, [device])
         train_loop_fn(para_loader.per_device_loader(device))
         xm.master_print("Finished training epoch {}".format(epoch))
 
-        xm.save(model.state_dict(), "models/net-DR-SimCLR.pt")
+        if epoch%20 == 0:
+            xm.save(model.state_dict(), "models/net-DR-SimCLR-epoch-{}.pt".format(epoch))
 
         if FLAGS.metrics_debug:
             xm.master_print(met.metrics_report(), flush=True)
