@@ -54,7 +54,8 @@ def init_argparse():
     )
     parser.add_argument("--log_steps", default=100, type=int, help="Log every n steps")
     parser.add_argument("--metrics_debug", default=False, type=bool)
-    parser.add_argument('--resume-epochs', type=int)
+    parser.add_argument("--resume-epochs", type=int)
+    parser.add_argument("--save-drive", default=False, action="store_true")
 
     return parser
 
@@ -101,76 +102,64 @@ def info_nce_loss(features, device):
 parser = init_argparse()
 FLAGS = parser.parse_args()
 
-SERIAL_EXEC = xmp.MpSerialExecutor()
-
-model = ResNetSimCLR(base_model="resnet50")
-
-WRAPPED_MODEL = xmp.MpModelWrapper(model)
-
-
-if FLAGS.resume_epochs:
-    print("Resuming Training ...")
-    state_dict = xser.load("models/net-DR-SimCLR-epoch-{}.pt".format(FLAGS.resume_epochs))
-    log = model.load_state_dict(state_dict, strict=False)
-    print(log)
 
 def train_resnet():
-    torch.manual_seed(1)
 
-    def get_dataset():
-
-        train_dataset = datasets.ImageFolder(
-            root="data/{}".format(FLAGS.data_dir),
-            transform=ContrastiveLearningViewGenerator(
-                get_simclr_pipeline_transform(224), n_views=2
-            ),
-        )
-        return train_dataset
-
-    # Using the serial executor avoids multiple processes
-    # to download the same data.
-    train_dataset = SERIAL_EXEC.run(get_dataset)
-
-    train_sampler = torch.utils.data.distributed.DistributedSampler(
-        train_dataset,
-        num_replicas=xm.xrt_world_size(),
-        rank=xm.get_ordinal(),
-        shuffle=True,
+    train_dataset = datasets.ImageFolder(
+        root="data/{}".format(FLAGS.data_dir),
+        transform=ContrastiveLearningViewGenerator(
+            get_simclr_pipeline_transform(224), n_views=2
+        ),
     )
+
+    train_sampler = None
+    if xm.xrt_world_size() > 1:
+        train_sampler = torch.utils.data.distributed.DistributedSampler(
+            train_dataset,
+            num_replicas=xm.xrt_world_size(),
+            rank=xm.get_ordinal(),
+            shuffle=True,
+        )
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=FLAGS.batch_size,
         sampler=train_sampler,
+        shuffle=False if train_sampler else True,
         num_workers=FLAGS.num_workers,
         drop_last=True,
     )
+
+    torch.manual_seed(42)
+
+    device = xm.xla_device()
+    model = ResNetSimCLR(base_model="resnet50").to(device)
+
+    if FLAGS.resume_epochs:
+        print("Resuming Training ...")
+        state_dict = xser.load(
+            "models/net-DR-SimCLR-epoch-{}.pt".format(FLAGS.resume_epochs)
+        )
+        log = model.load_state_dict(state_dict, strict=False)
+        print(log)
 
     # Scale learning rate to num cores
     learning_rate = FLAGS.learning_rate * xm.xrt_world_size()
 
     # Get loss function, optimizer, and model
-    device = xm.xla_device()
-    model = WRAPPED_MODEL.to(device)
-
     optimizer = torch.optim.Adam(model.parameters(), learning_rate, weight_decay=5e-4)
+    criterion = torch.nn.CrossEntropyLoss()  # YO
 
-    criterion = torch.nn.CrossEntropyLoss().to(device)  # YO
-
-    def train_loop_fn(loader):
+    def train_loop_fn(loader, epoch):
         tracker = xm.RateTracker()
         model.train()
 
         for x, (data, _) in enumerate(loader):
             optimizer.zero_grad()
-
             data = torch.cat(data, dim=0)
-
             output = model(data)
             logits, labels = info_nce_loss(output, device)  # YO
-
             loss = criterion(logits, labels)  # YO
-
             loss.backward()
             xm.optimizer_step(optimizer)
             tracker.add(FLAGS.batch_size)
@@ -198,16 +187,28 @@ def train_resnet():
     start_epoch = 0
     if FLAGS.resume_epochs:
         start_epoch = FLAGS.resume_epochs
-    
+
     end_epoch = FLAGS.num_epochs
 
+    train_device_loader = pl.MpDeviceLoader(train_loader, device)
+
     for epoch in range(start_epoch, end_epoch):
-        para_loader = pl.ParallelLoader(train_loader, [device])
-        train_loop_fn(para_loader.per_device_loader(device))
+        # para_loader = pl.ParallelLoader(train_loader, [device])
+        # train_loop_fn(para_loader.per_device_loader(device))
+        train_loop_fn(train_device_loader, epoch)
         xm.master_print("Finished training epoch {}".format(epoch))
 
-        if epoch%10== 0:
-            xm.save(model.state_dict(), "models/net-DR-SimCLR-epoch-{}.pt".format(epoch))
+        if epoch % 2 == 0:
+            model_name = "net-DR-SimCLR-epoch-{}.pt".format(epoch)
+            if FLAGS.save_drive:
+                model_name = (
+                    "/content/drive/MyDrive/Colab Notebooks/SimCLR/models/SimCLR-1-DR-pytorch/"
+                    + model_name
+                )
+
+                xm.save(model.state_dict(), model_name)
+            else:
+                xm.save(model.state_dict(), "models/" + model_name)
 
         if FLAGS.metrics_debug:
             xm.master_print(met.metrics_report(), flush=True)
