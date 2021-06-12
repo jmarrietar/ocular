@@ -34,7 +34,7 @@ def init_argparse():
         "--data_dir", metavar="DIR", default="/tmp/cifar", help="path to dataset"
     )
     parser.add_argument("--batch-size", default=64, type=int, metavar="N")
-    parser.add_argument("--num_workers", default=2, type=int)
+    parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument(
         "--learning-rate", default=0.00001, type=float, help="initial learning rate"
     )
@@ -206,7 +206,7 @@ def train_resnet():
         train_loop_fn(para_loader.per_device_loader(device))
         xm.master_print("Finished training epoch {}".format(epoch))
 
-        if epoch%2 == 0:
+        if epoch%20 == 0:
             xm.save(model.state_dict(), "models/net-DR-SimCLR-epoch-{}.pt".format(epoch))
 
         if FLAGS.metrics_debug:
