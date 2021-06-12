@@ -8,6 +8,10 @@ data/**/**/**/*.txt
 Notebooks/.ipynb_checkpoints/*
 
 # Images
+**/**/**/*.jpg
+**/**/**/*.txt
+**/**/**/*.tfrecord
+**/**/**/*.jpg
 data/**/**/*.jpg
 data/**/**/*.jpeg
 data/kaggle/**/**/*.jpeg
@@ -18,6 +22,11 @@ data/sample@500.zip
 data/sample@1000.zip
 data/sample@2000.zip
 data/sample@3000.zip
+sample@500.zip
+sample@1000.zip
+sample@2000.zip
+sample@3000.zip
+
 
 # Compiled python modules.
 *.pyc
