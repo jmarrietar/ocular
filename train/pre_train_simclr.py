@@ -110,19 +110,9 @@ WRAPPED_MODEL = xmp.MpModelWrapper(model)
 
 if FLAGS.resume_epochs:
     print("Resuming Training ...")
-
     state_dict = xser.load("models/net-DR-SimCLR-epoch-{}.pt".format(FLAGS.resume_epochs))
-
-    #for k in list(state_dict.keys()):
-    #    if k.startswith('backbone.'):
-    #        if k.startswith('backbone') and not k.startswith('backbone.fc'):
-    #        # remove prefix
-    #            state_dict[k[len("backbone."):]] = state_dict[k]
-    #    del state_dict[k]
-
     log = model.load_state_dict(state_dict, strict=False)
     print(log)
-
 
 def train_resnet():
     torch.manual_seed(1)
@@ -130,7 +120,7 @@ def train_resnet():
     def get_dataset():
 
         train_dataset = datasets.ImageFolder(
-            root="{}".format(FLAGS.data_dir),
+            root="data/{}".format(FLAGS.data_dir),
             transform=ContrastiveLearningViewGenerator(
                 get_simclr_pipeline_transform(224), n_views=2
             ),
@@ -216,7 +206,7 @@ def train_resnet():
         train_loop_fn(para_loader.per_device_loader(device))
         xm.master_print("Finished training epoch {}".format(epoch))
 
-        if epoch%20 == 0:
+        if epoch%2 == 0:
             xm.save(model.state_dict(), "models/net-DR-SimCLR-epoch-{}.pt".format(epoch))
 
         if FLAGS.metrics_debug:
