@@ -26,10 +26,64 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.utils.serialization as xser
 import torch_xla.utils.utils as xu
 
-
 crop_scale = (0.14, 1.0) if multicrop > 0 else (0.08, 1.0)
 mc_scale = (0.05, 0.14)
 mc_size = 96
+
+def init_argparse():
+  parser = argparse.ArgumentParser()
+  parser.add_argument(
+      '--fname', type=str,
+      help='name of config file to load',
+      default='configs.yaml')
+  parser.add_argument(
+      '--devices', type=str, nargs='+', default=['cuda:0'],
+      help='which devices to use on local machine')
+  parser.add_argument(
+      '--sel', type=str,
+      help='which script to run',
+      choices=[
+          'paws_train',
+          'suncet_train',
+          'fine_tune',
+          'snn_fine_tune'
+      ])
+
+  fname = parser.fname
+  sel = parser.sel
+
+  logging.basicConfig()
+  logger = logging.getLogger()
+  logger.info(f'called-params {sel} {fname}')
+
+  # -- load script params
+  params = None
+  with open(fname, 'r') as y_file:
+      params = yaml.load(y_file)
+      logger.info('loaded params...')
+      pp = pprint.PrettyPrinter(indent=4)
+      pp.pprint(params)
+
+  args = params
+
+  # Define Parameters
+  FLAGS = {}
+  FLAGS['data_dir'] = "/tmp/cifar"
+  FLAGS['batch_size'] = 32
+  FLAGS['num_workers'] = 2
+  FLAGS['learning_rate'] = 0.001
+  FLAGS['momentum'] = 0.9
+  FLAGS['num_epochs'] = 10
+  FLAGS['num_cores'] = 8 if os.environ.get('TPU_NAME', None) else 1
+  FLAGS['log_steps'] = 20
+  FLAGS['metrics_debug'] = False
+  FLAGS['model_name'] = args["meta"]["model_name"]
+
+
+  crop_scale = (0.14, 1.0) if multicrop > 0 else (0.08, 1.0)
+  mc_scale = (0.05, 0.14)
+  mc_size = 96
+
 
 def init_model(device, model_name="resnet50", use_pred=False, output_dim=128):
     if "wide_resnet" in model_name:
@@ -147,7 +201,6 @@ def my_loss_func(
 
     # Step 3: compute cross-entropy loss H(targets, queries)
     #loss = torch.mean(torch.sum(torch.log(probs**(-targets)), dim=1))
-
     criterion = torch.nn.CrossEntropyLoss()
     targets2 = targets.argmax(-1)
 
@@ -161,7 +214,60 @@ def my_loss_func(
 
     return loss, rloss
 
+
 def train_resnet18():
+
+  model_name = args["meta"]["model_name"]
+  output_dim = args["meta"]["output_dim"]
+  multicrop = args["data"]["multicrop"]
+
+  # -- CRITERTION
+  reg = args["criterion"]["me_max"]
+  supervised_views = args["criterion"]["supervised_views"]
+  classes_per_batch = args["criterion"]["classes_per_batch"]
+  s_batch_size = args["criterion"]["supervised_imgs_per_class"]
+  u_batch_size = args["criterion"]["unsupervised_batch_size"]
+  temperature = args["criterion"]["temperature"]
+  sharpen = args["criterion"]["sharpen"]
+
+  # -- DATA
+  unlabeled_frac = args["data"]["unlabeled_frac"]
+  color_jitter = args["data"]["color_jitter_strength"]
+  normalize = args["data"]["normalize"]
+  root_path = args["data"]["root_path"]
+  s_image_folder = args["data"]["s_image_folder"]
+  u_image_folder = args["data"]["u_image_folder"]
+  dataset_name = args["data"]["dataset"]
+  subset_path = args["data"]["subset_path"]
+  unique_classes = args["data"]["unique_classes_per_rank"]
+  label_smoothing = args["data"]["label_smoothing"]
+  data_seed = None
+
+  copy_data = args["meta"]["copy_data"]
+  use_pred_head = args["meta"]["use_pred_head"]
+
+  use_fp16 = args["meta"]["use_fp16"]
+
+  # -- OPTIMIZATION
+  wd = float(args["optimization"]["weight_decay"])
+  num_epochs = args["optimization"]["epochs"]
+  warmup = args["optimization"]["warmup"]
+  start_lr = args["optimization"]["start_lr"]
+  lr = args["optimization"]["lr"]
+  final_lr = args["optimization"]["final_lr"]
+  mom = args["optimization"]["momentum"]
+  nesterov = args["optimization"]["nesterov"]
+
+  # -- META
+  load_model = args["meta"]["load_checkpoint"]
+  r_file = args["meta"]["read_checkpoint"]
+
+
+  # -- LOGGING
+  folder = args["logging"]["folder"]
+  tag = args["logging"]["write_tag"]
+  # ----------------------------------------------------------------------- #
+
   torch.manual_seed(1)
 
   ############# PAWS CODE ##################
@@ -377,11 +483,15 @@ def train_resnet18():
   return 0, 0, 0, 0
 
 
-# Start training processes
 def _mp_fn(rank, flags):
   global FLAGS
   FLAGS = flags
   torch.set_default_tensor_type('torch.FloatTensor')
   accuracy, data, pred, target = train_resnet18()
 
-xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS['num_cores'], start_method='fork')
+
+if __name__ == "__main__":
+    parser = init_argparse()
+    FLAGS = parser.parse_args()
+    print(FLAGS)
+    xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS['num_cores'], start_method='fork')
