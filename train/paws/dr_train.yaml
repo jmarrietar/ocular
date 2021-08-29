@@ -10,12 +10,12 @@ data:
   color_jitter_strength: 1.0
   data_seed: null
   dataset: dr
-  s_image_folder: dr/sample@2000/
-  u_image_folder: dr/train_voets/
+  s_image_folder: sample@2000/
+  u_image_folder: train_voets/
   label_smoothing: 0.1
   multicrop: 6
   normalize: true
-  root_path: datasets/
+  root_path: data/
   subset_path: dr_subsets
   unique_classes_per_rank: false
   unlabeled_frac: 0.9
