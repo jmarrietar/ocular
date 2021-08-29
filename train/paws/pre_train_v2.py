@@ -160,9 +160,9 @@ def my_loss_func(
     target_views,
     target_supports,
     target_support_labels,
+    multicrop,
     sharpen=sharpen_func,
     snn=snn,
-    multicrop,
 ):
     # -- NOTE: num views of each unlabeled instance = 2+multicrop
     batch_size = len(anchor_views) // (2 + multicrop)
