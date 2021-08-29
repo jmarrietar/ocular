@@ -1,16 +1,36 @@
 import argparse
-import yaml
-import pprint
 import logging
 import os
+import pprint
+import sys
+import time
+from collections import OrderedDict
+
+import gdown
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+import torchvision
+import torchvision.models as models
+import yaml
+from torch.hub import load_state_dict_from_url
+from torchvision import datasets, transforms
+
 import resnet as resnet
+import torch_xla
+import torch_xla.core.xla_model as xm
+import torch_xla.debug.metrics as met
+import torch_xla.distributed.parallel_loader as pl
+import torch_xla.distributed.xla_multiprocessing as xmp
+import torch_xla.utils.serialization as xser
+import torch_xla.utils.utils as xu
 import wide_resnet as wide_resnet
-from data_manager import init_data, make_transforms, make_multicrop_transform
+from data_manager import init_data, make_multicrop_transform, make_transforms
 
 logging.basicConfig()
 logger = logging.getLogger()
-
-
 
 
 def init_argparse():
@@ -244,7 +264,6 @@ def train_resnet18():
     )
 
     encoder = encoder.to(device)  # YOO
-
 
     crop_scale = (0.14, 1.0) if multicrop > 0 else (0.08, 1.0)
     mc_scale = (0.05, 0.14)
