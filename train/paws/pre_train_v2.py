@@ -29,6 +29,13 @@ import torch_xla.utils.utils as xu
 import wide_resnet as wide_resnet
 from data_manager import init_data, make_multicrop_transform, make_transforms
 
+from utils.utils import (
+    CSVLogger,
+    AverageMeter,
+    AllGather,
+    AllReduce
+)
+
 logging.basicConfig()
 logger = logging.getLogger()
 
