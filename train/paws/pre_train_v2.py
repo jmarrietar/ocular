@@ -258,6 +258,10 @@ def train_resnet18():
     folder = params["logging"]["folder"]
     tag = params["logging"]["write_tag"]
 
+    tau = temperature
+    T = sharpen
+
+
     torch.manual_seed(1)
 
     ############# PAWS CODE ##################
