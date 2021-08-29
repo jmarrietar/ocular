@@ -128,13 +128,13 @@ def init_model(device, model_name="resnet50", use_pred=False, output_dim=128):
     return encoder
 
 
-def sharpen_func(p):
+def sharpen_func(p, T):
     sharp_p = p ** (1.0 / T)
     sharp_p /= torch.sum(sharp_p, dim=1, keepdim=True)
     return sharp_p
 
 
-def snn(device, query, supports, labels, tau):
+def snn(device, query, supports, labels, tau, T):
 
     softmax = torch.nn.Softmax(dim=1)
     """ Soft Nearest Neighbours similarity classifier """
@@ -162,6 +162,8 @@ def my_loss_func(
     target_support_labels,
     multicrop,
     tau,
+    T,
+    me_max,
     sharpen=sharpen_func,
     snn=snn,
 ):
@@ -169,12 +171,12 @@ def my_loss_func(
     batch_size = len(anchor_views) // (2 + multicrop)
 
     # Step 1: compute anchor predictions
-    probs = snn(device, anchor_views, anchor_supports, anchor_support_labels, tau)
+    probs = snn(device, anchor_views, anchor_supports, anchor_support_labels, tau, T)
 
     # Step 2: compute targets for anchor predictions
     with torch.no_grad():
-        targets = snn(device, target_views, target_supports, target_support_labels, tau)
-        targets = sharpen(targets)
+        targets = snn(device, target_views, target_supports, target_support_labels, tau, T)
+        targets = sharpen(targets, T)
         if multicrop > 0:
             mc_target = 0.5 * (targets[:batch_size] + targets[batch_size:])
             targets = torch.cat(
@@ -261,7 +263,7 @@ def train_resnet18():
 
     tau = temperature
     T = sharpen
-
+    me_max=reg
 
     torch.manual_seed(1)
 
@@ -443,6 +445,8 @@ def train_resnet18():
                     target_support_labels=labels,
                     multicrop=multicrop,
                     tau=tau,
+                    T=T,
+                    me_max=me_max,
                 )
 
                 loss = ploss + me_max
