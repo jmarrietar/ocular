@@ -162,6 +162,7 @@ def my_loss_func(
     target_support_labels,
     sharpen=sharpen_func,
     snn=snn,
+    multicrop,
 ):
     # -- NOTE: num views of each unlabeled instance = 2+multicrop
     batch_size = len(anchor_views) // (2 + multicrop)
@@ -435,6 +436,7 @@ def train_resnet18():
                     target_views=target_views,
                     target_supports=target_supports,
                     target_support_labels=labels,
+                    multicrop=multicrop,
                 )
 
                 loss = ploss + me_max
