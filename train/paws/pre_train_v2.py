@@ -482,4 +482,4 @@ if __name__ == "__main__":
     global FLAGS
     FLAGS = parser.parse_args()
     print(FLAGS)
-    xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS["num_cores"], start_method="fork")
+    xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores, start_method="fork")
