@@ -161,6 +161,7 @@ def my_loss_func(
     target_supports,
     target_support_labels,
     multicrop,
+    tau,
     sharpen=sharpen_func,
     snn=snn,
 ):
@@ -441,6 +442,7 @@ def train_resnet18():
                     target_supports=target_supports,
                     target_support_labels=labels,
                     multicrop=multicrop,
+                    tau=tau,
                 )
 
                 loss = ploss + me_max
