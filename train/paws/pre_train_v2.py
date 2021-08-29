@@ -3,14 +3,14 @@ import yaml
 import pprint
 import logging
 import os
-
+import resnet as resnet
+import wide_resnet as wide_resnet
+from data_manager import init_data, make_transforms, make_multicrop_transform
 
 logging.basicConfig()
 logger = logging.getLogger()
 
-crop_scale = (0.14, 1.0) if multicrop > 0 else (0.08, 1.0)
-mc_scale = (0.05, 0.14)
-mc_size = 96
+
 
 
 def init_argparse():
@@ -244,6 +244,11 @@ def train_resnet18():
     )
 
     encoder = encoder.to(device)  # YOO
+
+
+    crop_scale = (0.14, 1.0) if multicrop > 0 else (0.08, 1.0)
+    mc_scale = (0.05, 0.14)
+    mc_size = 96
 
     # -- make data transforms
     transform, init_transform = make_transforms(
