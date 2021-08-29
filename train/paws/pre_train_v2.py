@@ -263,7 +263,6 @@ def train_resnet18():
 
     tau = temperature
     T = sharpen
-    me_max=reg
 
     torch.manual_seed(1)
 
@@ -446,7 +445,7 @@ def train_resnet18():
                     multicrop=multicrop,
                     tau=tau,
                     T=T,
-                    me_max=me_max,
+                    me_max=reg,
                 )
 
                 loss = ploss + me_max
