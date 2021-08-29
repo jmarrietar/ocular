@@ -7,6 +7,7 @@ import yaml
 import os
 import math
 import torch
+import torch.distributed as dist
 
 from logging import getLogger
 
