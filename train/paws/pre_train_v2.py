@@ -327,7 +327,7 @@ def train_resnet18():
     # scaler = torch.cuda.amp.GradScaler(enabled=use_fp16)
 
     # Scale learning rate to num cores
-    learning_rate = FLAGS.get("learning_rate") * xm.xrt_world_size()
+    learning_rate = FLAGS.learning_rate * xm.xrt_world_size()
 
     # 2. TO DO: Optimizer Doble check learning rate
     optimizer = torch.optim.Adam(encoder.parameters(), learning_rate, weight_decay=5e-4)
@@ -435,7 +435,7 @@ def train_resnet18():
 
                 xm.optimizer_step(optimizer)
 
-                if itr % FLAGS.get("log_steps") == 0:
+                if itr % FLAGS.log_steps == 0:
                     print(
                         "[xla:{}]({}) Loss={:.5f} Rate={:.2f} GlobalRate={:.2f} Time={}".format(
                             xm.get_ordinal(),
@@ -458,7 +458,7 @@ def train_resnet18():
     data, pred, target = None, None, None
 
     start_epoch = 0
-    end_epoch = FLAGS.get("num_epochs")
+    end_epoch = FLAGS.num_epochs
 
     train_supervised_loader = pl.MpDeviceLoader(supervised_loader, device)
     train_unsupervised_loader = pl.MpDeviceLoader(unsupervised_loader, device)
