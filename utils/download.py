@@ -12,9 +12,9 @@ data_samples = {
     "sample@20000": "https://drive.google.com/uc?id=1MTDpLzpmhSiZq2jSdmHx2UDPn9FC8gzO",
     "val-voets-tf": "https://drive.google.com/uc?id=1VzVgMGTkBBPG2qbzLunD9HvLzH6tcyrv",
     "train_voets": "https://drive.google.com/uc?id=1AmcFh1MOOZ6aqKm2eO7XEdgmIEqHKTZ5",
+    "train_voets_backup": "https://drive.google.com/uc?id=1N8iOrGaK0nbmc2UvaPz-9DaRgfUhW764",
     "voets_test_images": "https://drive.google.com/uc?id=15S_V3B_Z3BOjCT3AbO2c887FyS5B0Lyd",
 }
-
 
 def download(data, url):
     # Download dataset
