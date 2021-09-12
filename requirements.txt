@@ -1,7 +1,7 @@
 pandas >= 1.0.4
 tensorflow >= 2.2.0
 numpy
-torch
+torch==1.8.1
 PyYAML
 torchvision
 -e .
