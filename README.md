@@ -18,3 +18,11 @@ python train/simclr/pre_train_simclr.py --data_dir train_voets --num_epochs 500 
 ```bash
 python train/simclr/pre_train_simclr.py --data_dir train_voets --num_epochs 300
 ```
+
+# Notebooks 
+
+Notebooks Importantes
+
+`Fine_Tune_SimCLR_Pytorch_XLA.ipynb` - Notebopok que hace el Finetune del SimCLR 
+
+`KD_DR.ipynb` Utiliza el modelo Fine tuneado para hacer un Teacher Student 
