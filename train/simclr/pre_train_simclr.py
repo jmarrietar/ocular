@@ -93,7 +93,7 @@ def info_nce_loss(features, device):
     logits = torch.cat([positives, negatives], dim=1)
     labels = torch.zeros(logits.shape[0], dtype=torch.long).to(device)
 
-    TEMPERATURE = 0.07  # Yo lo Hardcodie
+    TEMPERATURE = 0.07
 
     logits = logits / TEMPERATURE
     return logits, labels
@@ -148,7 +148,7 @@ def train_resnet():
 
     # Get loss function, optimizer, and model
     optimizer = torch.optim.Adam(model.parameters(), learning_rate, weight_decay=5e-4)
-    criterion = torch.nn.CrossEntropyLoss()  # YO
+    criterion = torch.nn.CrossEntropyLoss()
 
     def train_loop_fn(loader, epoch):
         tracker = xm.RateTracker()
@@ -158,8 +158,8 @@ def train_resnet():
             optimizer.zero_grad()
             data = torch.cat(data, dim=0)
             output = model(data)
-            logits, labels = info_nce_loss(output, device)  # YO
-            loss = criterion(logits, labels)  # YO
+            logits, labels = info_nce_loss(output, device)
+            loss = criterion(logits, labels)
             loss.backward()
             xm.optimizer_step(optimizer)
             tracker.add(FLAGS.batch_size)
