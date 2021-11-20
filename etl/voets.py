@@ -78,6 +78,12 @@ def preprocess_images() -> None:
 
             for i, row in enumerate(reader):
                 basename, grade = row[:2]
+                new_filename = "{0}.jpg".format(basename)
+                
+                # Check if file already Exists
+                if exists(join(DATA_DIR, str(int(grade)), new_filename)):
+                    print("Image Already Exists!")
+                    continue
 
                 try:
                     im_path = glob(join(RAW, split, "{}*".format(basename)))[0]
@@ -241,8 +247,8 @@ def main():
     """
     preprocess_images()
     distribute_images()
-    create_tfrecords_files()
-    clean()
+    #create_tfrecords_files()
+    #clean()
 
 
 if __name__ == "__main__":
