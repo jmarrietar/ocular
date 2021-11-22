@@ -11,7 +11,7 @@ from PIL import Image
 
 
 CLASSES = [0, 1]
-SAMPLE = 10000
+SAMPLE = 20000
 SOURCE_DIR = "data/voets/train"
 random.seed(42)
 
