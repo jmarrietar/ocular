@@ -17,6 +17,9 @@ data/**/**/*.jpeg
 data/kaggle/**/**/*.jpeg
 data/messidor2/**/**/*.png
 data/messidor2/**/**/*.jpg
+data/droll-messidor2/complete/*.jpg
+data/**/*.csv
+data/**/**/*.csv
 data/kaggle/kaggle_processed/*
 data/sample@500.zip
 data/sample@1000.zip
